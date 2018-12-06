@@ -1,4 +1,4 @@
-# THE CODE WILL APPEAR IN THE DAY OF THE WORKSHOP
+# THE CODE WILL APPEAR ON THE DAY OF THE WORKSHOP
 
 # Tutorial on Conversational AI
 Teaching machines to accomplish tasks by conversing naturally with humans is challenging. Currently,
