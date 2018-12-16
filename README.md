@@ -17,7 +17,11 @@ Create virtual environment:
 ```
 virtualenv -p /usr/bin/python2.7 my_project
 ```
-source it and install necessary requirements.
+source it
+```
+source my_project/bin/activate
+```
+and install necessary requirements.
 ```
 pip install -r requirements.txt 
 ```
@@ -27,4 +31,14 @@ These are the only requirements to run the code - the dataset is very lightweigh
 so all experiments you can easily run on the your private machine.
 
 # Agenda
-TBD
+Tutorial on Conversational AI sala 3, piętro 15
+
+1. Registration 8:50 - 9:20
+2. Workshop 9:20 - 10:50 (Ivan - introduction and NLU)
+3. Coffee break 10:50 - 11:10
+4. Workshop 11:10 - 12:40 (Inigo - coding and PM)
+5. Lunch break 12:40 - 13:20
+6. Workshop 13:20 - 14:50 (Paweł - coding and NLG with E2E)
+7. Coffee break 14:50 - 15:10
+8. Workshop 15:10 - 16:40 (Paweł - coding E2E)
+
