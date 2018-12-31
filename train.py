@@ -1,12 +1,9 @@
-from __future__ import division, print_function, unicode_literals
-
 import argparse
 import json
 import random
 import time
 from io import open
 
-import numpy as np
 import torch
 
 from utils import util
@@ -25,7 +22,7 @@ parser.add_argument('--emb_size', type=int, default=50)
 parser.add_argument('--hid_size_enc', type=int, default=50)
 parser.add_argument('--hid_size_dec', type=int, default=50)
 parser.add_argument('--hid_size_pol', type=int, default=50)
-parser.add_argument('--db_size', type=int, default=6)  # +6 for booking activity?
+parser.add_argument('--db_size', type=int, default=6)
 parser.add_argument('--bs_size', type=int, default=19)
 
 parser.add_argument('--cell_type', type=str, default='lstm')
@@ -46,7 +43,7 @@ parser.add_argument('--no_cuda',  type=util.str2bool, nargs='?', const=True, def
 parser.add_argument('--seed', type=int, default=0, metavar='S', help='random seed (default: 1)')
 parser.add_argument('--train_output', type=str, default='data/train_dials/', help='Training output dir path')
 
-parser.add_argument('--max_epochs', type=int, default=10)
+parser.add_argument('--max_epochs', type=int, default=15)
 parser.add_argument('--early_stop_count', type=int, default=2)
 parser.add_argument('--model_dir', type=str, default='model/model/')
 parser.add_argument('--model_name', type=str, default='model.ckpt')
@@ -55,7 +52,7 @@ parser.add_argument('--load_param', type=util.str2bool, nargs='?', const=True, d
 parser.add_argument('--epoch_load', type=int, default=0)
 
 parser.add_argument('--mode', type=str, default='train', help='training or testing: test, train, RL')
-parser.add_argument('--policy', type=str, default='default')
+parser.add_argument('--policy', type=str, default='softmax')
 
 
 
@@ -94,7 +91,7 @@ def trainIters(model, n_epochs=10, args=args):
         print_loss_total = 0; print_grad_total = 0; print_act_total = 0  # Reset every print_every
         start_time = time.time()
 
-        dials = train_dials.keys()
+        dials = list(train_dials.keys())
         random.shuffle(dials)
         input_tensor = [];target_tensor = [];bs_tensor = [];db_tensor = []
 
@@ -117,7 +114,7 @@ def trainIters(model, n_epochs=10, args=args):
 
         # VALIDATION
         valid_loss = 0
-        for name, val_file in val_dials.items():
+        for name, val_file in list(val_dials.items()):
             input_tensor = []; target_tensor = []; bs_tensor = [];db_tensor = []
             input_tensor, target_tensor, bs_tensor, db_tensor = util.loadDialogue(model, val_file, input_tensor,
                                                                                          target_tensor, bs_tensor,

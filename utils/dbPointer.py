@@ -2,7 +2,7 @@ import sqlite3
 
 import numpy as np
 
-from nlp import normalize
+from .nlp import normalize
 
 
 # loading databases
@@ -15,16 +15,24 @@ for domain in domains:
     dbs[domain] = c
 
 
-def oneHotVector(num_available_entities):
-    """Return number of available entities for a particular domain.
-
-    num_available_entitites: number of entities in the database
-     that satisfy the current requirements of the user.
-    """
+def oneHotVector(num, domain, vector):
+    """Return number of available entities for particular domain."""
     # TODO TASK 2
     # Create a one-hot encoding informing how many entities are available to the user
     available_entities = np.array([0, 0, 0, 0, 0, 0])
-    # TODO
+
+    if num == 0:
+        available_entities = np.array([1, 0, 0, 0, 0, 0])
+    elif num <= 2:
+        available_entities = np.array([0, 1, 0, 0, 0, 0])
+    elif num <= 5:
+        available_entities = np.array([0, 0, 1, 0, 0, 0])
+    elif num <= 10:
+        available_entities = np.array([0, 0, 0, 1, 0, 0])
+    elif num <= 40:
+        available_entities= np.array([0, 0, 0, 0, 1, 0])
+    elif num > 40:
+        available_entities= np.array([0, 0, 0, 0, 0, 1])
 
     return available_entities
 
@@ -37,7 +45,7 @@ def queryResult(domain, turn):
 
     flag = True
     #print turn['metadata'][domain]['semi']
-    for key, val in turn['metadata'][domain]['semi'].items():
+    for key, val in list(turn['metadata'][domain]['semi'].items()):
         if key == 'requested' or val == "" or val == "dont care" or val == 'not mentioned' or val == "don't care" or val == "dontcare" or val == "do n't care":
             pass
         else:
@@ -76,9 +84,9 @@ def queryResultVenues(domain, turn, real_belief=False):
     sql_query = "select * from {}".format(domain)
 
     if real_belief == True:
-        items = turn.items()
+        items = list(turn.items())
     else:
-        items = turn['metadata'][domain]['semi'].items()
+        items = list(turn['metadata'][domain]['semi'].items())
 
     flag = True
     for key, val in items:

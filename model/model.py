@@ -1,11 +1,11 @@
-from __future__ import division, print_function, unicode_literals
+
 
 import json
 import operator
 import os
 import random
 from io import open
-from Queue import PriorityQueue
+from queue import PriorityQueue
 
 import torch
 import torch.nn as nn
@@ -13,9 +13,10 @@ import torch.nn as nn
 from torch import optim
 from utils.util import BeamSearchNode
 
-import encoder
-import policy
-import decoder
+from . import encoder
+from . import policy
+from . import decoder
+from functools import reduce
 
 SOS_token = 0
 EOS_token = 1
@@ -92,7 +93,7 @@ class Model(nn.Module):
             self.decoder = decoder.DecoderRNN(self.emb_size, self.hid_size_dec, len(self.output_lang_index2word), self.cell_type, self.dropout).to(self.device)
 
         if self.args.mode == 'train':
-            self.gen_criterion = nn.NLLLoss(ignore_index=3, size_average=True)  # logsoftmax is done in decoder part
+            self.gen_criterion = nn.NLLLoss(ignore_index=3, reduction='elementwise_mean')  # logsoftmax is done in decoder part
             self.setOptimizers()
 
     def train(self, input_tensor, input_lengths, target_tensor, target_lengths, db_tensor, bs_tensor, dial_name=None):
@@ -113,11 +114,11 @@ class Model(nn.Module):
     def setOptimizers(self):
         self.optimizer_policy = None
         if self.args.optim == 'sgd':
-            self.optimizer = optim.SGD(lr=self.args.lr_rate, params=filter(lambda x: x.requires_grad, self.parameters()), weight_decay=self.args.l2_norm)
+            self.optimizer = optim.SGD(lr=self.args.lr_rate, params=[x for x in self.parameters() if x.requires_grad], weight_decay=self.args.l2_norm)
         elif self.args.optim == 'adadelta':
-            self.optimizer = optim.Adadelta(lr=self.args.lr_rate, params=filter(lambda x: x.requires_grad, self.parameters()), weight_decay=self.args.l2_norm)
+            self.optimizer = optim.Adadelta(lr=self.args.lr_rate, params=[x for x in self.parameters() if x.requires_grad], weight_decay=self.args.l2_norm)
         elif self.args.optim == 'adam':
-            self.optimizer = optim.Adam(lr=self.args.lr_rate, params=filter(lambda x: x.requires_grad, self.parameters()), weight_decay=self.args.l2_norm)
+            self.optimizer = optim.Adam(lr=self.args.lr_rate, params=[x for x in self.parameters() if x.requires_grad], weight_decay=self.args.l2_norm)
 
     def forward(self, input_tensor, input_lengths, target_tensor, target_lengths, db_tensor, bs_tensor):
         """Given the user sentence, user belief state and database pointer,
@@ -134,19 +135,12 @@ class Model(nn.Module):
         # All necessary variables are prepared for you already.
 
         # ENCODER
-        # TODO
+        encoder_outputs, encoder_hidden = self.encoder(input_tensor, input_lengths)
 
         # POLICY
-        # TODO
+        decoder_hidden = self.policy(encoder_hidden, db_tensor, bs_tensor)
 
         # GENERATOR
-        ################################
-        # REMOVE THIS AFTER YOU ARE DONE
-        encoder_outputs = torch.randn(seq_len, batch_size, self.args.hid_size_dec)
-        decoder_hidden = (torch.randn(1, batch_size, self.args.hid_size_dec),
-                         torch.randn(1, batch_size, self.args.hid_size_dec))
-        # REMOVE THIS AFTER YOU ARE DONE
-        ################################
 
         # Teacher forcing: Feed the target as the next input
         decoder_input = torch.LongTensor([[SOS_token] for _ in range(batch_size)], device=self.device)
@@ -315,7 +309,7 @@ class Model(nn.Module):
         torch.save(self.decoder.state_dict(), self.model_dir + self.model_name + '-' + str(iter) + '.dec')
 
         with open(self.model_dir + self.model_name + '.config', 'w') as f:
-            f.write(unicode(json.dumps(vars(self.args), ensure_ascii=False, indent=4)))
+            f.write(str(json.dumps(vars(self.args), ensure_ascii=False, indent=4)))
 
     def loadModel(self, iter=0):
         print('Loading parameters of iter %s ' % iter)
@@ -324,35 +318,35 @@ class Model(nn.Module):
         self.decoder.load_state_dict(torch.load(self.model_dir + self.model_name + '-' + str(iter) + '.dec'))
 
     def input_index2word(self, index):
-        if self.input_lang_index2word.has_key(index):
+        if index in self.input_lang_index2word:
             return self.input_lang_index2word[index]
         else:
             raise UserWarning('We are using UNK')
 
     def output_index2word(self, index):
-        if self.output_lang_index2word.has_key(index):
+        if index in self.output_lang_index2word:
             return self.output_lang_index2word[index]
         else:
             raise UserWarning('We are using UNK')
 
     def input_word2index(self, index):
-        if self.input_lang_word2index.has_key(index):
+        if index in self.input_lang_word2index:
             return self.input_lang_word2index[index]
         else:
             return 2
 
     def output_word2index(self, index):
-        if self.output_lang_word2index.has_key(index):
+        if index in self.output_lang_word2index:
             return self.output_lang_word2index[index]
         else:
             return 2
 
     def getCount(self):
-        learnable_parameters = filter(lambda p: p.requires_grad, self.parameters())
+        learnable_parameters = [p for p in self.parameters() if p.requires_grad]
         param_cnt = sum([reduce((lambda x, y: x * y), param.shape) for param in learnable_parameters])
         print('Model has', param_cnt, ' parameters.')
 
     def printGrad(self):
-        learnable_parameters = filter(lambda p: p.requires_grad, self.parameters())
+        learnable_parameters = [p for p in self.parameters() if p.requires_grad]
         for idx, param in enumerate(learnable_parameters):
             print(param.grad, param.shape)

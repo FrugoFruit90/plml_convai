@@ -14,25 +14,25 @@ def parseGoal(goal, d, domain):
     """Parses user goal into dictionary format."""
     goal[domain] = {}
     goal[domain] = {'informable': [], 'requestable': [], 'booking': []}
-    if d['goal'][domain].has_key('info'):
+    if 'info' in d['goal'][domain]:
         if domain == 'train':
             # we consider dialogues only where train had to be booked!
-            if d['goal'][domain].has_key('book'):
+            if 'book' in d['goal'][domain]:
                 goal[domain]['requestable'].append('reference')
-            if d['goal'][domain].has_key('reqt'):
+            if 'reqt' in d['goal'][domain]:
                 if 'trainID' in d['goal'][domain]['reqt']:
                     goal[domain]['requestable'].append('id')
         else:
-            if d['goal'][domain].has_key('reqt'):
+            if 'reqt' in d['goal'][domain]:
                 for s in d['goal'][domain]['reqt']:  # addtional requests:
                     if s in ['phone', 'address', 'postcode', 'reference', 'id']:
                         # ones that can be easily delexicalized
                         goal[domain]['requestable'].append(s)
-            if d['goal'][domain].has_key('book'):
+            if 'book' in d['goal'][domain]:
                 goal[domain]['requestable'].append("reference")
 
         goal[domain]["informable"] = d['goal'][domain]['info']
-        if d['goal'][domain].has_key('book'):
+        if 'book' in d['goal'][domain]:
             goal[domain]["booking"] = d['goal'][domain]['book']
 
     return goal
@@ -40,7 +40,7 @@ def parseGoal(goal, d, domain):
 
 def evaluateModel(dialogues, val_dials, mode='valid'):
     """Gathers statistics for the whole sets."""
-    fin1 = file('data/delex.json')
+    fin1 = open('data/delex.json')
     delex_dialogues = json.load(fin1)
     successes, matches = 0, 0
     total = 0
@@ -51,7 +51,7 @@ def evaluateModel(dialogues, val_dials, mode='valid'):
                      'taxi': [0, 0, 0],
                      'hospital': [0, 0, 0], 'police': [0, 0, 0]}
 
-    for filename, dial in dialogues.items():
+    for filename, dial in list(dialogues.items()):
         data = delex_dialogues[filename]
 
         goal, _, _, requestables, _ = evaluateRealDialogue(data)
@@ -62,13 +62,13 @@ def evaluateModel(dialogues, val_dials, mode='valid'):
         matches += match
         total += 1
 
-        for domain in gen_stats.keys():
+        for domain in list(gen_stats.keys()):
             gen_stats[domain][0] += stats[domain][0]
             gen_stats[domain][1] += stats[domain][1]
             gen_stats[domain][2] += stats[domain][2]
 
         if 'SNG' in filename:
-            for domain in gen_stats.keys():
+            for domain in list(gen_stats.keys()):
                 sng_gen_stats[domain][0] += stats[domain][0]
                 sng_gen_stats[domain][1] += stats[domain][1]
                 sng_gen_stats[domain][2] += stats[domain][2]
@@ -95,19 +95,19 @@ def evaluateModel(dialogues, val_dials, mode='valid'):
 
     # Print results
     if mode == 'valid':
-        try: print "Valid BLUES SCORE %.10f" % bscorer.score(model_corpus, corpus)
+        try: print("Valid BLUES SCORE %.10f" % bscorer.score(model_corpus, corpus))
         except: print('BLUE SCORE ERROR')
-        print 'Valid Corpus Matches : %2.2f%%' % (matches / float(total) * 100)
-        print 'Valid Corpus Success : %2.2f%%' %  (successes / float(total) * 100)
-        print 'Valid Total number of dialogues: %s ' % total
+        print('Valid Corpus Matches : %2.2f%%' % (matches / float(total) * 100))
+        print('Valid Corpus Success : %2.2f%%' %  (successes / float(total) * 100))
+        print('Valid Total number of dialogues: %s ' % total)
     else:
         try:
-            print "Corpus BLUES SCORE %.10f" % bscorer.score(model_corpus, corpus)
+            print("Corpus BLUES SCORE %.10f" % bscorer.score(model_corpus, corpus))
         except:
             print('BLUE SCORE ERROR')
-        print 'Corpus Matches : %2.2f%%' % (matches / float(total) * 100)
-        print 'Corpus Success : %2.2f%%' % (successes / float(total) * 100)
-        print 'Total number of dialogues: %s ' % total
+        print('Corpus Matches : %2.2f%%' % (matches / float(total) * 100))
+        print('Corpus Success : %2.2f%%' % (successes / float(total) * 100))
+        print('Total number of dialogues: %s ' % total)
 
 
 def evaluateGeneratedDialogue(dialog, goal, realDialogue, real_requestables):
@@ -124,13 +124,13 @@ def evaluateGeneratedDialogue(dialog, goal, realDialogue, real_requestables):
     venue_offered = {}
     domains_in_goal = []
 
-    for domain in goal.keys():
+    for domain in list(goal.keys()):
         venue_offered[domain] = []
         provided_requestables[domain] = []
         domains_in_goal.append(domain)
 
     for t, sent_t in enumerate(dialog):
-        for domain in goal.keys():
+        for domain in list(goal.keys()):
             # for computing success
             if '[' + domain + '_name]' in sent_t or '_id' in sent_t:
                 if domain in ['restaurant']:
@@ -158,10 +158,10 @@ def evaluateGeneratedDialogue(dialog, goal, realDialogue, real_requestables):
                         provided_requestables[domain].append(requestable)
 
     # if name was given in the task
-    for domain in goal.keys():
+    for domain in list(goal.keys()):
         # if name was provided for the user, the match is being done automatically
-        if realDialogue['goal'][domain].has_key('info'):
-            if realDialogue['goal'][domain]['info'].has_key('name'):
+        if 'info' in realDialogue['goal'][domain]:
+            if 'name' in realDialogue['goal'][domain]['info']:
                 venue_offered[domain] = '[' + domain + '_name]'
 
     """
@@ -178,7 +178,7 @@ def evaluateGeneratedDialogue(dialog, goal, realDialogue, real_requestables):
     match = 0
     success = 0
     # MATCH
-    for domain in goal.keys():
+    for domain in list(goal.keys()):
         match_stat = 0
         if domain in ['restaurant']:
             goal_venues = queryResultVenues(domain, goal[domain]['informable'], real_belief=True)
@@ -196,7 +196,7 @@ def evaluateGeneratedDialogue(dialog, goal, realDialogue, real_requestables):
         stats[domain][0] = match_stat
         stats[domain][2] = 1
 
-    if match == len(goal.keys()):
+    if match == len(list(goal.keys())):
         match = 1
     else:
         match = 0
@@ -251,7 +251,7 @@ def evaluateRealDialogue(dialog):
     real_requestables = {}
     provided_requestables = {}
     venue_offered = {}
-    for domain in goal.keys():
+    for domain in list(goal.keys()):
         provided_requestables[domain] = []
         venue_offered[domain] = []
         real_requestables[domain] = goal[domain]['requestable']
@@ -291,8 +291,8 @@ def evaluateRealDialogue(dialog):
     # offer was made?
     for domain in domains_in_goal:
         # if name was provided for the user, the match is being done automatically
-        if dialog['goal'][domain].has_key('info'):
-            if dialog['goal'][domain]['info'].has_key('name'):
+        if 'info' in dialog['goal'][domain]:
+            if 'name' in dialog['goal'][domain]['info']:
                 venue_offered[domain] = '[' + domain + '_name]'
 
     # HARD (0-1) EVAL
@@ -301,7 +301,7 @@ def evaluateRealDialogue(dialog):
 
     match, success = 0, 0
     # MATCH
-    for domain in goal.keys():
+    for domain in list(goal.keys()):
         match_stat = 0
         if domain in ['restaurant']:
             goal_venues = queryResultVenues(domain, dialog['goal'][domain]['info'], real_belief=True)
@@ -321,7 +321,7 @@ def evaluateRealDialogue(dialog):
         stats[domain][0] = match_stat
         stats[domain][2] = 1
 
-    if match == len(goal.keys()):
+    if match == len(list(goal.keys())):
         match = 1
     else:
         match = 0
@@ -358,7 +358,7 @@ def evaluateRealDialogue(dialog):
 
 
 def evaluateCorpus():
-    with open('data/multi-woz/delex.json') as outfile:
+    with open('data/delex.json') as outfile:
         train_dials = json.load(outfile)
 
     # SUCCESS SCORE
@@ -373,9 +373,9 @@ def evaluateCorpus():
         matches += match
         total += 1
 
-    print '\tCorpus Matches       : %2.2f%%' % (matches / float(total) * 100)
-    print '\tCorpus Success   : %2.2f%%' % (successes / float(total) * 100)
-    print 'TOTAL', total
+    print('\tCorpus Matches       : %2.2f%%' % (matches / float(total) * 100))
+    print('\tCorpus Success   : %2.2f%%' % (successes / float(total) * 100))
+    print('TOTAL', total)
 
 
 if __name__ == '__main__':

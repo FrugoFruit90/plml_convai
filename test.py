@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
-from __future__ import division, print_function, unicode_literals
+
 
 import argparse
 import json
-
 import time
 
 import torch
@@ -44,7 +43,7 @@ device = torch.device("cuda" if args.cuda else "cpu")
 def load_config(args):
     config = util.unicode_to_utf8(
         json.load(open('%s.json' % args.model_path, 'rb')))
-    for key, value in args.__args.items():
+    for key, value in list(args.__args.items()):
         try:
             config[key] = value.value
         except:
@@ -107,7 +106,7 @@ def decode(num=1):
         # VALIDATION
         val_dials_gen = {}
         valid_loss = 0
-        for name, val_file in val_dials.items():
+        for name, val_file in list(val_dials.items()):
             input_tensor = [];  target_tensor = [];bs_tensor = [];db_tensor = []
             input_tensor, target_tensor, bs_tensor, db_tensor = util.loadDialogue(model, val_file, input_tensor, target_tensor, bs_tensor, db_tensor)
             # create an empty matrix with padding tokens
@@ -130,7 +129,7 @@ def decode(num=1):
         # TESTING
         test_dials_gen = {}
         test_loss = 0
-        for name, test_file in test_dials.items():
+        for name, test_file in list(test_dials.items()):
             input_tensor = [];  target_tensor = [];bs_tensor = [];db_tensor = []
             input_tensor, target_tensor, bs_tensor, db_tensor = util.loadDialogue(model, test_file, input_tensor, target_tensor, bs_tensor, db_tensor)
             # create an empty matrix with padding tokens
@@ -157,7 +156,7 @@ def decodeWrapper():
     # Load config file
     with open(args.model_path + '.config') as f:
         add_args = json.load(f)
-        for k, v in add_args.items():
+        for k, v in list(add_args.items()):
             setattr(args, k, v)
 
         args.mode = 'test'

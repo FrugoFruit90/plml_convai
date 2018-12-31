@@ -36,8 +36,17 @@ class SoftmaxPolicy(nn.Module):
         super(SoftmaxPolicy, self).__init__()
         self.hidden_size = hidden_size
 
-        # # DEFINE ACTION SIZE AND LAYERS
-        # TODO
+        # DEFINE ACTION SIZE AND LAYERS
+        self.act_num = 10
+
+        self.W_u = nn.Linear(hidden_size, hidden_size_pol, bias=False)
+        self.W_bs = nn.Linear(bs_size, hidden_size_pol, bias=False)
+        self.W_db = nn.Linear(db_size, hidden_size_pol, bias=False)
+
+        self.first_layer = nn.Linear(hidden_size_pol, hidden_size_pol, bias=True)
+        self.second_layer = nn.Linear(hidden_size_pol, self.act_num, bias=True)
+
+        self.encoding_layer = nn.Linear(self.act_num, hidden_size_pol, bias=True)
 
     def forward(self, encodings, db_tensor, bs_tensor, act_tensor=None):
         if isinstance(encodings, tuple):
@@ -46,7 +55,13 @@ class SoftmaxPolicy(nn.Module):
             hidden = encodings
 
         # BUILD NETWORK
-        # TODO
+        output = self.W_u(hidden[0]) + self.W_db(db_tensor) + self.W_bs(bs_tensor)
+        output = self.first_layer(output)
+        output = self.second_layer(output)
+
+        output = torch.softmax(output, dim=1)
+
+        output = self.encoding_layer(output)
 
         if isinstance(encodings, tuple):  # return LSTM tuple
             return (output.unsqueeze(0), encodings[1])

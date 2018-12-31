@@ -4,7 +4,7 @@ import json
 import os
 import re
 import shutil
-import urllib
+import urllib.request, urllib.parse, urllib.error
 from collections import OrderedDict
 from io import BytesIO
 from zipfile import ZipFile
@@ -37,7 +37,7 @@ def addDBPointer(turn):
     pointer_vector = np.zeros(6 * len(domains))
     for domain in domains:
         num_entities = dbPointer.queryResult(domain, turn)
-        pointer_vector = dbPointer.oneHotVector(num_entities)
+        pointer_vector = dbPointer.oneHotVector(num_entities, domain, pointer_vector)
 
     return pointer_vector
 
@@ -51,26 +51,29 @@ def get_summary_bstate(bstate):
     # The belief state should consists of 3 numbers per slot.
     # Each 0-1 number represents whether the slot was 'not mentioned'
     # or the user 'dont care' or the slot has specific value from the ontology:
-    summary_bstate = [0 for _ in range(12)]
-
+    summary_bstate = []
     for slot in bstate[domain]['semi']:
         if slot != 'requested':
-            pass
-            #TODO
+            slot_enc = [0, 0, 0]  # not mentioned, dontcare, filled
+            if bstate[domain]['semi'][slot] == 'not mentioned':
+                slot_enc[0] = 1
+            elif bstate[domain]['semi'][slot] in ['dont care', 'dontcare', "don't care"]:
+                slot_enc[1] = 1
+            elif bstate[domain]['semi'][slot]:
+                slot_enc[2] = 1
 
-    assert len(summary_bstate) == 12
+            summary_bstate += slot_enc
 
     # TODO TASK 3
     # Create one-hot encoding of the belief state for requests.
     # The belief state should consists of 1 numbers per slot.
     # Each 0-1 number represents whether the slot was requested by the user.
-    summary_bstate = [0 for _ in range(19)]
-    if bstate[domain]['semi'].has_key('requested'):
-        for slot in ['pricerange', 'area', 'food', 'phone', 'address', 'postcode', 'name']:
-            pass
-            # TODO
-
-    assert len(summary_bstate) == 19
+    for slot in ['pricerange', 'area', 'food', 'phone', 'address', 'postcode', 'name']:
+        if slot in bstate[domain]['semi']['requested']:
+            slot_enc_req = [1.]
+        else:
+            slot_enc_req = [0.]
+        summary_bstate += slot_enc_req
 
     return summary_bstate
 
@@ -81,7 +84,7 @@ def analyze_dialogue(dialogue, maxlen):
     # do all the necessary postprocessing
     if len(d['log']) % 2 != 0:
         #print path
-        print 'odd # of turns'
+        print('odd # of turns')
         return None  # odd number of turns, wrong dialogue
     d_pp = {}
     d_pp['goal'] = d['goal']  # for now we just copy the goal
@@ -89,22 +92,22 @@ def analyze_dialogue(dialogue, maxlen):
     sys_turns = []
     for i in range(len(d['log'])):
         if len(d['log'][i]['text'].split()) > maxlen:
-            print 'too long'
+            print('too long')
             return None  # too long sentence, wrong dialogue
         if i % 2 == 0:  # usr turn
             if 'db_pointer' not in d['log'][i]:
-                print 'no db'
+                print('no db')
                 return None  # no db_pointer, probably 2 usr turns in a row, wrong dialogue
             text = d['log'][i]['text']
             if not is_ascii(text):
-                print 'not ascii'
+                print('not ascii')
                 return None
             #d['log'][i]['tkn_text'] = self.tokenize_sentence(text, usr=True)
             usr_turns.append(d['log'][i])
         else:  # sys turn
             text = d['log'][i]['text']
             if not is_ascii(text):
-                print 'not ascii'
+                print('not ascii')
                 return None
             #d['log'][i]['tkn_text'] = self.tokenize_sentence(text, usr=False)
             belief_summary = get_summary_bstate(d['log'][i]['metadata'])
@@ -133,8 +136,8 @@ def get_dial(dialogue):
 
 
 def createDict(word_freqs):
-    words = word_freqs.keys()
-    freqs = word_freqs.values()
+    words = list(word_freqs.keys())
+    freqs = list(word_freqs.values())
 
     sorted_idx = np.argsort(freqs)
     sorted_words = [words[ii] for ii in sorted_idx[::-1]]
@@ -152,7 +155,7 @@ def createDict(word_freqs):
     for ii, ww in enumerate(sorted_words):
         worddict[ww] = ii + len(extra_tokens)
 
-    for key, idx in worddict.items():
+    for key, idx in list(worddict.items()):
         if idx >= DICT_SIZE:
             del worddict[key]
 
@@ -168,7 +171,7 @@ def loadData():
 
     if not os.path.exists(data_url):
         print("Downloading and unzipping the MultiWOZ dataset")
-        resp = urllib.urlopen(dataset_url)
+        resp = urllib.request.urlopen(dataset_url)
         zip_ref = ZipFile(BytesIO(resp.read()))
         zip_ref.extractall("data/multi-woz")
         zip_ref.close()
@@ -186,12 +189,12 @@ def createDelexData():
     3) addition of database pointer
     4) saves the delexicalized data
     """
-
+    
     # create dictionary of delexicalied values that then we will search against, order matters here!
     dic = delexicalize.prepareSlotValuesIndependent()
     delex_data = {}
 
-    fin1 = file('data/woz2/data.json')
+    fin1 = open('data/woz2/data.json')
     data = json.load(fin1)
 
     for dialogue_name in tqdm(data):
@@ -233,13 +236,13 @@ def divideData(data):
     """Given test and validation sets, divide
     the data for three different sets"""
     testListFile = []
-    fin = file('data/testListFile')
+    fin = open('data/testListFile')
     for line in fin:
         testListFile.append(line[:-1])
     fin.close()
 
     valListFile = []
-    fin = file('data/valListFile')
+    fin = open('data/valListFile')
     for line in fin:
         valListFile.append(line[:-1])
     fin.close()
@@ -290,13 +293,13 @@ def divideData(data):
                     word_freqs_sys[w] += 1
 
     # save all dialogues
-    with open('data/val_dials.json', 'wb') as f:
+    with open('data/val_dials.json', 'w') as f:
         json.dump(val_dials, f, indent=4)
 
-    with open('data/test_dials.json', 'wb') as f:
+    with open('data/test_dials.json', 'w') as f:
         json.dump(test_dials, f, indent=4)
 
-    with open('data/train_dials.json', 'wb') as f:
+    with open('data/train_dials.json', 'w') as f:
         json.dump(train_dials, f, indent=4)
 
     return word_freqs_usr, word_freqs_sys
@@ -315,25 +318,25 @@ def buildDictionaries(word_freqs_usr, word_freqs_sys):
     idx2words = []
     for dictionary in dicts:
         dic = {}
-        for k,v in dictionary.items():
+        for k,v in list(dictionary.items()):
             dic[v] = k
         idx2words.append(dic)
 
-    with open('data/input_lang.index2word.json', 'wb') as f:
+    with open('data/input_lang.index2word.json', 'w') as f:
         json.dump(idx2words[0], f, indent=2)
-    with open('data/input_lang.word2index.json', 'wb') as f:
+    with open('data/input_lang.word2index.json', 'w') as f:
         json.dump(dicts[0], f,indent=2)
-    with open('data/output_lang.index2word.json', 'wb') as f:
-        json.dump(idx2words[1], f,indent=2)
-    with open('data/output_lang.word2index.json', 'wb') as f:
+    with open('data/output_lang.index2word.json', 'w') as f:
+        json.dump(idx2words[1], f, indent=2)
+    with open('data/output_lang.word2index.json', 'w') as f:
         json.dump(dicts[1], f,indent=2)
 
 
 def main():
-    # print('Creating delexicalized dialogues. Get yourself a coffee, this might take a while.')
+    # # print('Creating delexicalized dialogues. Get yourself a coffee, this might take a while.')
     delex_data = createDelexData()
 
-    with open('data/delex_data.json', 'wb') as f:
+    with open('data/delex_data.json', 'w') as f:
         json.dump(delex_data, f, indent=4)
 
     with open('data/delex_data.json') as f:

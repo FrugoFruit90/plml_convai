@@ -2,7 +2,7 @@ import re
 
 import simplejson as json
 
-from nlp import normalize
+from .nlp import normalize
 
 digitpat = re.compile('\d+')
 timepat = re.compile("\d{1,2}[:]\d{1,2}")
@@ -21,12 +21,12 @@ def prepareSlotValuesIndependent():
 
     # read databases
     for domain in domains:
-        fin = file('db/' + domain + '_db.json')
+        fin = open('db/' + domain + '_db.json')
         db_json = json.load(fin)
         fin.close()
 
         for ent in db_json:
-            for key, val in ent.items():
+            for key, val in list(ent.items()):
                 if val == '?' or val == 'free':
                     pass
                 elif key == 'address':
@@ -68,12 +68,11 @@ def prepareSlotValuesIndependent():
                 # The tokens should have the form '[value_NAME_OF_THE_SLOT]'.
 
                 elif key == 'area':
-                    pass
+                    delex_area.append((normalize(val), '[' + 'value' + '_' + 'area' + ']'))
                 elif key == 'food':
-                    pass
+                    delex_food.append((normalize(val), '[' + 'value' + '_' + 'food' + ']'))
                 elif key == 'pricerange':
-                    pass
-
+                    delex_price.append((normalize(val), '[' + 'value' + '_' + 'pricerange' + ']'))
                 else:
                     pass
 
